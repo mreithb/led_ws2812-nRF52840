@@ -1,92 +1,120 @@
-# led_ws2812
+.. _led_ws2812_sample:
 
+WS2812 Sample Application
+#########################
 
+Overview
+********
 
-## Getting started
+This sample application demonstrates basic usage of the WS2812 LED
+strip driver, for controlling LED strips using WS2812, WS2812b,
+SK6812, Everlight B1414 and compatible driver chips.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Requirements
+************
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+.. _NeoPixel Ring 12 from AdaFruit: https://www.adafruit.com/product/1643
+.. _74AHCT125: https://cdn-shop.adafruit.com/datasheets/74AHC125.pdf
 
-## Add your files
+- LED strip using WS2812 or compatible, such as the `NeoPixel Ring 12
+  from AdaFruit`_.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+- Note that 5V communications may require a level translator, such as the
+  `74AHCT125`_.
 
-```
-cd existing_repo
-git remote add origin https://git.fronius.com/PCHSE/project-unicorn/led_ws2812.git
-git branch -M main
-git push -uf origin main
-```
+- LED power strip supply. It's fine to power the LED strip off of your board's
+  IO voltage level even if that's below 5V; the LEDs will simply be dimmer in
+  this case.
 
-## Integrate with your tools
+Wiring
+******
 
-- [ ] [Set up project integrations](https://git.fronius.com/PCHSE/project-unicorn/led_ws2812/-/settings/integrations)
+#. Ensure your Zephyr board, and the LED strip share a common ground.
+#. Connect the LED strip control pin (either I2S SDOUT, SPI MOSI or GPIO) from
+   your board to the data input pin of the first WS2812 IC in the strip.
+#. Power the LED strip at an I/O level compatible with the control pin signals.
 
-## Collaborate with your team
+Wiring on a thingy52
+********************
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+The thingy52 has integrated NMOS transistors, that can be used instead of a level shifter.
+The I2S driver supports inverting the output to suit this scheme, using the ``out-active-low`` dts
+property. See the overlay file
+:zephyr_file:`samples/drivers/led_ws2812/boards/thingy52_nrf52832.overlay` for more detail.
 
-## Test and Deploy
+Building and Running
+*********************
 
-Use the built-in continuous integration in GitLab.
+.. _blog post on WS2812 timing: https://wp.josh.com/2014/05/13/ws2812-neopixels-are-not-so-finicky-once-you-get-to-know-them/
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+This sample's source directory is :zephyr_file:`samples/drivers/led_ws2812/`.
 
-***
+To make sure the sample is set up properly for building, you must:
 
-# Editing this README
+- select the correct WS2812 driver backend for your SoC. This currently should
+  be :kconfig:option:`CONFIG_WS2812_STRIP_SPI` unless you are using an nRF51 SoC, in
+  which case it will be :kconfig:option:`CONFIG_WS2812_STRIP_GPIO`.
+  For the nRF52832, the SPI peripheral might output some garbage at the end of
+  transmissions, and that might confuse older WS2812 strips. Use the I2S driver
+  in those cases.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+- create a ``led-strip`` :ref:`devicetree alias <dt-alias-chosen>`, which refers
+  to a node in your :ref:`devicetree <dt-guide>` with a
+  ``worldsemi,ws2812-i2s``, ``worldsemi,ws2812-spi`` or
+  ``worldsemi,ws2812-gpio`` compatible. The node must be properly configured for
+  the driver backend (I2S, SPI or GPIO) and daisy chain length (number of WS2812
+  chips).
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+For example devicetree configurations for each compatible, see
+:zephyr_file:`samples/drivers/led_ws2812/boards/thingy52_nrf52832.overlay`,
+:zephyr_file:`samples/drivers/led_ws2812/boards/nrf52dk_nrf52832.overlay` and
+:zephyr_file:`samples/drivers/led_ws2812/boards/nrf51dk_nrf51422.overlay`.
 
-## Name
-Choose a self-explaining name for your project.
+Some boards are already supported out of the box; see the :file:`boards`
+directory for this sample for details.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Then build and flash the application:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+.. zephyr-app-commands::
+   :zephyr-app: samples/drivers/led_ws2812
+   :board: <board>
+   :goals: flash
+   :compact:
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+When you connect to your board's serial console, you should see the
+following output:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+.. code-block:: none
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+   ***** Booting Zephyr OS build v2.1.0-rc1-191-gd2466cdaf045 *****
+   [00:00:00.005,920] <inf> main: Found LED strip device WS2812
+   [00:00:00.005,950] <inf> main: Displaying pattern on strip
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Supported drivers
+*****************
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+This sample uses different drivers depending on the selected board:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+I2S driver:
+- thingy52_nrf52832
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+SPI driver:
+- mimxrt1050_evk
+- mimxrt1050_evk_qspi
+- nrf52dk_nrf52832
+- nucleo_f070rb
+- nucleo_g071rb
+- nucleo_h743zi
+- nucleo_l476rg
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+GPIO driver (cortex-M0 only):
+- bbc_microbit
+- nrf51dk_nrf51422
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+References
+**********
 
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- `RGB LED strips: an overview <http://nut-bolt.nl/2012/rgb-led-strips/>`_
+- `74AHCT125 datasheet
+  <https://cdn-shop.adafruit.com/datasheets/74AHC125.pdf>`_
+- An excellent `blog post on WS2812 timing`_.
